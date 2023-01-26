@@ -1,0 +1,294 @@
+---
+title: "interactiveMap"
+author: "Josephat Oyondi"
+date: "2023-01-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r cars}
+summary(cars)
+```
+```{r}
+library(ggforce)
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() +
+  geom_mark_hull(aes(filter = model == "corvette", label = model)) +
+  labs(
+    title = "Fuel economy from 1999 to 2008 for 38 car models",
+    caption = "Source: https://fueleconomy.gov/",
+    x = "Engine Displacement", 
+    y = "Miles Per Gallon"
+  )
+```
+```{r}
+#using Plot_ly()
+plot_ly(diamonds, x = ~cut, color = ~clarity, colors = "Accent")
+```
+
+```{r}
+
+```
+
+```{r}
+library(dplyr)
+
+diamonds %>%
+  plot_ly(x = ~cut) %>% 
+  add_histogram() %>%
+  group_by(cut) %>%
+  summarise(n = n()) %>%
+  add_text(
+    text = ~scales::comma(n), y = ~n, 
+    textposition = "top middle", 
+    cliponaxis = FALSE
+  )
+```
+
+```{r}
+#converting ggplot to be interactive using ggplotly()
+library(ggplot2)
+library(plotly)
+p <- ggplot(diamonds, aes(x = log(carat), y = log(price))) + 
+  geom_hex(bins = 100)
+ggplotly(p)
+```
+
+```{r}
+#ggplotly to visualize the statistical summaries from ggplot
+p <- ggplot(diamonds, aes(x = log(price), color = clarity)) + 
+    geom_freqpoly()
+ggplotly(p)
+```
+
+```{r}
+#visualizing diamonds ggplotly with relative frequencies
+p <- ggplot(diamonds, aes(x = log(price), color = clarity)) + 
+    geom_freqpoly(stat = "density") + 
+    facet_wrap(~cut)
+ggplotly(p)
+```
+```{r}
+p <- ggplot(diamonds, aes(x=clarity, y=log(price), color=clarity)) +
+    ggforce::geom_sina(alpha = 0.1) + 
+    stat_summary(fun.data = "mean_cl_boot", color = "black") +
+    facet_wrap(~cut)
+
+# WebGL is a lot more efficient at rendering lots of points
+toWebGL(ggplotly(p))
+```
+
+```{r}
+library(GGally)
+m <- lm(log(price) ~ log(carat) + cut, data = diamonds)
+gg <- ggcoef(m)
+# dynamicTicks means generate new axis ticks on zoom
+ggplotly(gg, dynamicTicks = TRUE)
+```
+```{r}
+library(naniar) #can be used in visualizing missing data
+# fake some missing data
+diamonds$price_miss <- ifelse(diamonds$depth>60, diamonds$price, NA)
+p <- ggplot(diamonds, aes(x = clarity, y = log(price_miss))) +
+    geom_miss_point(alpha = 0.1) + 
+    stat_summary(fun.data = "mean_cl_boot", colour = "black") +
+    facet_wrap(~cut)
+toWebGL(ggplotly(p))
+```
+```{r}
+library(plotly)
+data(economics, package = "ggplot2")
+
+# sort economics by psavert, just to 
+# show difference between paths and lines
+p <- economics %>%
+  arrange(psavert) %>%
+  plot_ly(x = ~date, y = ~psavert)
+
+add_paths(p)
+add_lines(p)
+```
+```{r}
+library(lubridate)
+econ <- economics %>%
+  mutate(yr = year(date), mnth = month(date))
+
+# One trace (more performant, but less interactive)
+econ %>%
+  group_by(yr) %>%
+  plot_ly(x = ~mnth, y = ~uempmed) %>%
+  add_lines(text = ~yr)
+
+# Multiple traces (less performant, but more interactive)
+plot_ly(econ, x = ~mnth, y = ~uempmed) %>%
+  add_lines(color = ~ordered(yr))
+  
+# The split argument guarantees one trace per group level (regardless 
+# of the variable type). This is useful if you want a consistent
+# visual property over multiple traces 
+# plot_ly(econ, x = ~mnth, y = ~uempmed) %>%
+#   add_lines(split = ~yr, color = I("black"))
+```
+
+```{r}
+p <- plot_ly(mpg, x = ~cty, y = ~hwy, alpha = 0.5)
+subplot(
+  add_markers(p, color = ~cyl, showlegend = FALSE) %>% 
+    colorbar(title = "Viridis"),
+  add_markers(p, color = ~factor(cyl))
+)
+```
+```{r}
+#using sequential colorscale for numeric variables
+col1 <- c("#132B43", "#56B1F7")
+col2 <- viridisLite::inferno(10)
+col3 <- colorRamp(c("red", "white", "blue"))
+subplot(
+  add_markers(p, color = ~cyl, colors = col1) %>%
+    colorbar(title = "ggplot2 default"),
+  add_markers(p, color = ~cyl, colors = col2) %>% 
+    colorbar(title = "Inferno"),
+  add_markers(p, color = ~cyl, colors = col3) %>% 
+    colorbar(title = "colorRamp")
+) %>% hide_legend()
+```
+
+```{r}
+p <- plot_ly(mpg, x = ~cty, y = ~hwy, alpha = 0.3) 
+subplot(
+  add_markers(p, symbol = ~cyl, name = "A single trace"),
+  add_markers(p, symbol = ~factor(cyl), color = I("black")) #I() is used to avoid mapping
+)
+```
+```{r}
+#adding a size parameter
+p <- plot_ly(mpg, x = ~cty, y = ~hwy, alpha = 0.3) 
+subplot(
+  add_markers(p, size = ~cyl, name = "default"),
+  add_markers(p, size = ~cyl, sizes = c(1, 500), name = "custom")
+)
+```
+```{r}
+#dotplots and error bars
+# Fit a full-factorial linear model
+m <- lm(
+  Sepal.Length ~ Sepal.Width * Petal.Length * Petal.Width, 
+  data = iris
+)
+
+# (1) get a tidy() data structure of covariate-level info 
+# (e.g., point estimate, standard error, etc)
+# (2) make sure term column is a factor ordered by the estimate
+# (3) plot estimate by term with an error bar for the standard error
+broom::tidy(m) %>% 
+  mutate(term = forcats::fct_reorder(term, estimate)) %>%
+  plot_ly(x = ~estimate, y = ~term) %>%
+  add_markers(
+    error_x = ~list(value = std.error), 
+    color = I("black"),
+    hoverinfo = "x"
+  )
+```
+```{r}
+#linetypes and semi_joins
+library(dplyr)
+top5 <- txhousing %>%
+  group_by(city) %>%
+  summarise(m = mean(sales, na.rm = TRUE)) %>%
+  arrange(desc(m)) %>%
+  top_n(5)
+
+tx5 <- semi_join(txhousing, top5, by = "city")
+
+plot_ly(tx5, x = ~date, y = ~median) %>%
+  add_lines(linetype = ~city)
+```
+
+```{r}
+library(dplyr)
+library(plotly)
+#dumbell
+mpg %>%
+  group_by(model) %>%
+  summarise(c = mean(cty), h = mean(hwy)) %>%
+  mutate(model = forcats::fct_reorder(model, c)) %>%
+  plot_ly() %>%
+  add_segments(
+    x = ~c, y = ~model,
+    xend = ~h, yend = ~model, 
+    color = I("gray"), showlegend = FALSE
+  ) %>%
+  add_markers(
+    x = ~c, y = ~model, 
+    color = I("blue"), 
+    name = "mpg city"
+  ) %>%
+  add_markers(
+    x = ~h, y = ~model, 
+    color = I("red"),
+    name  = "mpg highway"
+  ) %>%
+  layout(xaxis = list(title = "Miles per gallon"))
+```
+
+```{r}
+#candlestick
+library(quantmod)
+msft <- getSymbols("MSFT", auto.assign = F)
+dat <- as.data.frame(msft)
+dat$date <- index(msft)
+dat <- subset(dat, date >= "2016-01-01")
+
+names(dat) <- sub("^MSFT\\.", "", names(dat))
+
+plot_ly(dat, x = ~date, xend = ~date, color = ~Close > Open, 
+        colors = c("red", "forestgreen"), hoverinfo = "none") %>%
+  add_segments(y = ~Low, yend = ~High, size = I(1)) %>%
+  add_segments(y = ~Open, yend = ~Close, size = I(3)) %>%
+  layout(showlegend = FALSE, yaxis = list(title = "Price")) %>%
+  rangeslider()
+```
+```{r}
+#density plots
+kerns <- c("gaussian", "epanechnikov", "rectangular", 
+          "triangular", "biweight", "cosine", "optcosine")
+p <- plot_ly()
+for (k in kerns) {
+  d <- density(economics$pce, kernel = k, na.rm = TRUE)
+  p <- add_lines(p, x = d$x, y = d$y, name = k)
+}
+p
+```
+
+```{r}
+#polygons and geospatial data
+base <- map_data("world", "canada") %>%
+  group_by(group) %>%
+  plotly_empty(x = ~long, y = ~lat, alpha = 0.2) %>%
+  layout(showlegend = FALSE, xaxis = list(scaleanchor = "y"))
+  
+base %>%
+  add_polygons(hoverinfo = "none", color = I("black")) %>%
+  add_markers(text = ~paste(name, "<br />", pop), hoverinfo = "text", 
+              color = I("red"), data = maps::canada.cities)
+```
+
+```{r}
+#ribbons
+library(ggplot2)
+library(plotly)
+m <- lm(mpg ~ wt, data = mtcars)
+broom::augment(m) %>%
+  plot_ly(x = ~wt, showlegend = FALSE) %>%
+  add_markers(y = ~mpg, color = I("black")) %>%
+  add_ribbons(ymin = ~.fitted - 1.96 * .se.fit, 
+              ymax = ~.fitted + 1.96 * .se.fit, 
+              color = I("gray80")) %>%
+  add_lines(y = ~.fitted, color = I("steelblue"))
+```
+
