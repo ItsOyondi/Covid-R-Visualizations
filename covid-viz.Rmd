@@ -10,5 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r cars}
-summary(cars)
+data = read.csv('owid-covid-data.csv')
+head(data)
 ```
