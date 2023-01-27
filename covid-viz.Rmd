@@ -8,8 +8,70 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Loading libraries
+```{r}
+library(plotly)
+library(dplyr)
+```
 
 ```{r cars}
 data = read.csv('owid-covid-data.csv')
 head(data)
 ```
+## Data preprocessing, checking on the column names and determine the important ones to help me in achieving the objectives, checking for null/NAN values.
+
+
+## Write the column names to a text file for my reference in the analysis
+```{r}
+columns <- colnames(data)
+file_columns<-file("columns.txt")
+writeLines(c(columns), file_columns)
+close(file_columns) #close the file
+```
+
+## Check columns with the null values
+```{r}
+#which(is.na(data))
+cols_with_na <- which(apply(data, 2, function(x) any(is.na(x))))
+
+#colnames(data)[cols_with_na] #this indicates that atleast there are missing records in one or more rows in each feature included in the dataset.Except iso_code, continent, location and date
+colSums(is.na(data))
+```
+## Visualizing the total reported cases since the start of the pandemic
+```{r}
+df <- data
+# show difference between paths and lines
+p <- df %>%
+  arrange(total_cases) %>%
+  plot_ly(x = ~date, y = ~total_cases)
+add_lines(p)
+```
+### Considering the new tests
+```{r}
+p <- df %>%
+  arrange(new_tests) %>%
+  plot_ly(x = ~date, y = ~new_tests)
+add_lines(p)
+```
+
+## A notable issue for the visualization is that although there were millions of reported cases, the number of new tests was relatively low, implying that not all countries could have accounted to new tests but had highest number of reported cases. 
+# To confirm the validity of this conclusion, the following visualization digs deep into highlighting the top countries with most cases and most new tests
+
+```{r}
+top10 <- df %>%
+  group_by(continent) %>%
+  summarise(m = mean(total_cases, na.rm = TRUE)) %>%
+  arrange(desc(m)) %>%
+  top_n(10)
+
+tx10 <- semi_join(df, top10, by = "continent")
+
+plot_ly(tx10, x = ~date, y = ~median) %>%
+  add_lines(linetype = ~location)
+```
+
+```{r}
+#use the new datasets with fixed latitudes for better map visualization.
+```
+
+
