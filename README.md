@@ -1,8 +1,11 @@
 # Covid-R-Visualizations
 This project provides a visualization of Covid-19 spread on maps and other interactive graphs using plotly package and R-shiny. Guided by Dr. A. 
-<<<<<<< HEAD
 
-Dataset source: https://github.com/owid/covid-19-data/tree/master/public/data
+
+Dataset source: [Owid Data](https://github.com/owid/covid-19-data/tree/master/public/data)
+# New dataset about coronavirus was extracted from the [Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Coronavirus Repository](https://github.com/CSSEGISandData/COVID-19). The Organized CSV files were obtained from [Coronavirus package responstory](https://github.com/RamiKrispin/coronavirus)
+
+**The description of the variable names can be obtained from this [repo](https://github.com/RamiKrispin/coronavirus) **
 
 Objectives:
 1. To create a map visualization showing the most affected countries, and regions based on the daily reported cases.
