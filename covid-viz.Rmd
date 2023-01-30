@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(plotly)
 library(dplyr)
+library(magrittr)
+library(ggplot2)
+Sys.setenv(MAPBOX_TOKEN = 11122223333444) #presevents the mapbox token error
 ```
 
 ```{r cars}
@@ -33,7 +36,6 @@ close(file_columns) #close the file
 ```{r}
 #which(is.na(data))
 cols_with_na <- which(apply(data, 2, function(x) any(is.na(x))))
-
 #colnames(data)[cols_with_na] #this indicates that atleast there are missing records in one or more rows in each feature included in the dataset.Except iso_code, continent, location and date
 colSums(is.na(data))
 ```
@@ -43,14 +45,17 @@ df <- data
 # show difference between paths and lines
 p <- df %>%
   arrange(total_cases) %>%
-  plot_ly(x = ~date, y = ~total_cases)
+  plot_ly(x = ~date, y = ~total_cases) %>% 
+    add_markers(alpha = 0.2, name = "alpha")
 add_lines(p)
+
+
 ```
 ### Considering the new tests
 ```{r}
 p <- df %>%
   arrange(new_tests) %>%
-  plot_ly(x = ~date, y = ~new_tests)
+  plot_ly(x = ~date, y = ~new_tests) %>% 
 add_lines(p)
 ```
 
@@ -72,6 +77,30 @@ plot_ly(tx10, x = ~date, y = ~median) %>%
 
 ```{r}
 #use the new datasets with fixed latitudes for better map visualization.
+new_data <- read.csv("coronavirus.csv")
+save(new_data, file = "corona.RData")
+head(new_data)
 ```
+
+```{r}
+#get the leading countries in terms of the number of cases confirmed
+
+filtered_df <- new_data %>% 
+  filter(type == "confirmed") %>%
+  group_by(country) %>%
+  summarise(sum_Cases = sum(cases)) %>%
+  arrange(-sum_Cases)%>%
+  top_n(10) #order the total in ascending order
+
+plt <- ggplot(filtered_df, aes(x = country, y=sum_Cases)) + geom_bar(stat="identity", fill="steelblue")+
+  theme_minimal()
+ggplotly(plt)
+
+
+```
+
+```{r}
+
+
 
 

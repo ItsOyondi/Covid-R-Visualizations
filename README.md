@@ -4,7 +4,7 @@ This project provides a visualization of Covid-19 spread on maps and other inter
 
 Dataset source: [Owid Data](https://github.com/owid/covid-19-data/tree/master/public/data)
 ### New dataset about coronavirus was extracted from the [Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) Coronavirus Repository](https://github.com/CSSEGISandData/COVID-19). 
-### The Organized CSV files were obtained from [Coronavirus package responstory](https://github.com/RamiKrispin/coronavirus)
+### The Organized CSV files were obtained from [Coronavirus package respostory](https://github.com/RamiKrispin/coronavirus)
 
 #### The description of the variable names can be obtained from this [repo](https://github.com/RamiKrispin/coronavirus)
 
