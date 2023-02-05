@@ -9,17 +9,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Loading libraries
-```{r}
+```{r warning=FALSE}
 library(plotly)
 library(dplyr)
 library(magrittr)
 library(ggplot2)
+library(countrycode)
+library(lubridate)
 Sys.setenv(MAPBOX_TOKEN = 11122223333444) #presevents the mapbox token error
 ```
 
-```{r cars}
+```{r}
 data = read.csv('owid-covid-data.csv')
-head(data)
+
+#head(data)
 ```
 ## Data preprocessing, checking on the column names and determine the important ones to help me in achieving the objectives, checking for null/NAN values.
 
@@ -35,18 +38,17 @@ close(file_columns) #close the file
 ## Check columns with the null values
 ```{r}
 #which(is.na(data))
-cols_with_na <- which(apply(data, 2, function(x) any(is.na(x))))
+#cols_with_na <- which(apply(data, 2, function(x) any(is.na(x))))
 #colnames(data)[cols_with_na] #this indicates that atleast there are missing records in one or more rows in each feature included in the dataset.Except iso_code, continent, location and date
-colSums(is.na(data))
+#colSums(is.na(data))
 ```
 ## Visualizing the total reported cases since the start of the pandemic
-```{r}
+```{r warning=FALSE}
 df <- data
 # show difference between paths and lines
 p <- df %>%
   arrange(total_cases) %>%
-  plot_ly(x = ~date, y = ~total_cases) %>% 
-    add_markers(alpha = 0.2, name = "alpha")
+  plot_ly(x = ~date, y = ~total_cases)
 add_lines(p)
 
 
@@ -62,17 +64,25 @@ add_lines(p)
 ## A notable issue for the visualization is that although there were millions of reported cases, the number of new tests was relatively low, implying that not all countries could have accounted to new tests but had highest number of reported cases. 
 # To confirm the validity of this conclusion, the following visualization digs deep into highlighting the top countries with most cases and most new tests
 
-```{r}
-top10 <- df %>%
-  group_by(continent) %>%
-  summarise(m = mean(total_cases, na.rm = TRUE)) %>%
-  arrange(desc(m)) %>%
-  top_n(10)
+```{r warning=FALSE}
+#group the dataset into years and months
+dates <- c(df$date)
+months <- month(ymd(dates))
+years <- year(ymd(dates))
+#new df
+new_df <- data.frame(Month = months, Year = years, Continent = df$continent, total_cases = df$total_cases)
 
-tx10 <- semi_join(df, top10, by = "continent")
+#create a plot for top 10 continents
+top10 <- new_df %>% 
+  group_by(Continent, Year) %>%
+  summarise(totals = sum(total_cases, na.rm = TRUE)) %>%
+  filter(!is.na(Continent)) %>%
+  arrange(desc(totals)) %>%
+  top_n(10) 
 
-plot_ly(tx10, x = ~date, y = ~median) %>%
-  add_lines(linetype = ~location)
+top10 %>%
+  plot_ly(x = ~Continent, y = ~totals, type = "bar")
+
 ```
 
 ```{r}
@@ -82,7 +92,7 @@ save(new_data, file = "corona.RData")
 head(new_data)
 ```
 
-```{r}
+```{r warning=FALSE}
 #get the leading countries in terms of the number of cases confirmed
 
 filtered_df <- new_data %>% 
@@ -104,3 +114,29 @@ ggplotly(plt)
 
 
 
+
+
+```
+
+
+
+```{r warning=FALSE}
+#creating a chroloplot
+dates = c(new_data$date)
+Date = ymd(dates)
+
+#new_data$code3 <- countrycode(new_data$country, "country.name", "iso3c") #convert the names into 3 letter country codes
+
+cases_summed <- new_data %>% 
+  mutate(Year = year(Date), Month = month(Date)) %>%
+  mutate(YearMonth = paste(format(as.Date(paste(Month, 1, Year), "%m %d %Y"), "%b %Y"), sep = " ")) %>%
+  group_by(country, YearMonth, iso3) %>% 
+  summarise(cases_sum = sum(cases))
+#iso3 is used for the country codes.
+cases_summed %>%
+  plot_ly(z = ~cases_sum, text = ~country, locations = ~iso3, locationmode = "ISO-3", type = "choropleth") %>%
+  colorbar(title = "Total Covid-reported cases ") %>%
+  layout(title = "Cases by Country", geo = list(showframe = FALSE, showcoastlines = FALSE),
+         coloraxis = list(colorscale = c("yellow", "red")))
+
+```
