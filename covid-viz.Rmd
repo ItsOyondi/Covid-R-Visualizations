@@ -121,6 +121,7 @@ ggplotly(plt)
 
 
 ```{r warning=FALSE}
+library(shiny)
 #creating a chroloplot
 dates = c(new_data$date)
 Date = ymd(dates)
@@ -131,12 +132,70 @@ cases_summed <- new_data %>%
   mutate(Year = year(Date), Month = month(Date)) %>%
   mutate(YearMonth = paste(format(as.Date(paste(Month, 1, Year), "%m %d %Y"), "%b %Y"), sep = " ")) %>%
   group_by(country, YearMonth, iso3) %>% 
+  filter(cases > 0) %>% #used to filter all cases recorded in negative
   summarise(cases_sum = sum(cases))
-#iso3 is used for the country codes.
-cases_summed %>%
-  plot_ly(z = ~cases_sum, text = ~country, locations = ~iso3, locationmode = "ISO-3", type = "choropleth") %>%
-  colorbar(title = "Total Covid-reported cases ") %>%
-  layout(title = "Cases by Country", geo = list(showframe = FALSE, showcoastlines = FALSE),
-         coloraxis = list(colorscale = c("yellow", "red")))
+
+
+#cases seem to have been recorded with negative values
+
+#get minimum and maximum values
+min_value <- min(cases_summed$cases_sum)
+max_value <- max(cases_summed$cases_sum)
+
+cat("Minimum value in cases_sum column:", min_value, "\n")
+cat("Maximum value in cases_sum column:", max_value, "\n")
+
+# Define a function to assign colors to countries
+assign_colors <- function(country) {
+  colors <- c("red", "blue", "green", "yellow", "purple")
+  country_colors <- ifelse(country %in% c("country1", "country2", "country3"), colors[1], 
+                          ifelse(country %in% c("country4", "country5", "country6"), colors[2],
+                          ifelse(country %in% c("country7", "country8", "country9"), colors[3],
+                          ifelse(country %in% c("country10", "country11", "country12"), colors[4],
+                          ifelse(country %in% c("country13", "country14", "country15"), colors[5], 
+                          "grey")))))
+  return(country_colors)
+}
+
+# Define the UI for the Shiny app
+ui <- fluidPage(
+  titlePanel("Cases by Country"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("month", "Month:", c("All", unique(cases_summed$YearMonth)))
+    ),
+    mainPanel(
+      plotlyOutput("choropleth")
+    )
+  )
+)
+
+# Define the server logic for the Shiny app
+server <- function(input, output) {
+  
+  # Filter the data based on the selected month and year
+  filtered_data <- reactive({
+    if (input$month == "All") {
+      cases_summed
+    } else {
+      cases_summed %>% filter(YearMonth == input$month)
+    }
+  })
+  
+  # Plot the choropleth map
+  output$choropleth <- renderPlotly({
+    filtered_data() %>%
+      mutate(color = assign_colors(country)) %>%
+      plot_ly(z = ~cases_sum, text = ~country, locations = ~iso3, locationmode = "ISO-3", type = "choropleth",
+              color = ~color) %>%
+      colorbar(title = "Total Covid-reported cases ") %>%
+      layout(title = "Cases by Country", geo = list(showframe = FALSE, showcoastlines = FALSE))
+  })
+  
+}
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server)
+
 
 ```
