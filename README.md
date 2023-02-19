@@ -13,3 +13,5 @@ Objectives:
 2. To visualize the trends of areas that recovered from the pandemic faster as the number of cases reduced.
 3. To create an interactive spread map right from the day the first case of Covid-19 was recorded up to date.
 
+
+##This project has been published [Here](https://itsoyondi.shinyapps.io/covid-viz/)

@@ -3,7 +3,9 @@ title: "Covid-viz"
 author: "Josephat Oyondi"
 date: "2023-01-22"
 output: html_document
+runtime: shiny
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -89,7 +91,7 @@ top10 %>%
 #use the new datasets with fixed latitudes for better map visualization.
 new_data <- read.csv("coronavirus.csv")
 save(new_data, file = "corona.RData")
-head(new_data)
+
 ```
 
 ```{r warning=FALSE}
@@ -110,11 +112,10 @@ ggplotly(plt)
 ```
 
 ```{r}
+load("corona.RData")
+corona_data <- new_data
 
-
-
-
-
+head(corona_data)
 
 ```
 
@@ -122,13 +123,14 @@ ggplotly(plt)
 
 ```{r warning=FALSE}
 library(shiny)
+
 #creating a chroloplot
-dates = c(new_data$date)
+dates = c(corona_data$date)
 Date = ymd(dates)
 
 #new_data$code3 <- countrycode(new_data$country, "country.name", "iso3c") #convert the names into 3 letter country codes
 
-cases_summed <- new_data %>% 
+cases_summed <- corona_data %>% 
   mutate(Year = year(Date), Month = month(Date)) %>%
   mutate(YearMonth = paste(format(as.Date(paste(Month, 1, Year), "%m %d %Y"), "%b %Y"), sep = " ")) %>%
   group_by(country, YearMonth, iso3) %>% 
@@ -163,6 +165,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       selectInput("month", "Month:", c("All", unique(cases_summed$YearMonth)))
+     
     ),
     mainPanel(
       plotlyOutput("choropleth")
@@ -193,6 +196,61 @@ server <- function(input, output) {
   })
   
 }
+
+# Run the Shiny app
+shinyApp(ui = ui, server = server,  options = list(width = "100%", height = "400px"))
+```
+
+### Creating a new choropleth for the cases using a slider input
+ 
+```{r warning=FALSE}
+
+library(shiny)
+
+# Read the data file into a data frame
+corona_data <- read.csv("coronavirus.csv")
+
+# Define the user interface of the Shiny app
+ui <- basicPage(
+  sliderInput(
+    "slider", "Time",
+    # Set the minimum value of the slider to the earliest date in the data
+    min = as.Date(corona_data$date[1]),
+    # Set the maximum value of the slider to the latest date in the data
+    max = as.Date(corona_data$date[length(corona_data$date)]),
+    # Set the default value of the slider to the latest date in the data
+    value = as.Date(corona_data$date[length(corona_data$date)]),
+    timeFormat = "%b %Y"
+  ),
+  # Define a plotly output to show a choropleth map of the cases by country
+  plotlyOutput("choropleth")
+)
+
+# Define the server of the Shiny app
+server <- shinyServer(function(input, output, session){
+  # Define a reactive expression to subset the data and calculate the sum of cases by country for the selected date
+  selected_data <- reactive({
+    selected_date <- as.Date(input$slider)
+    subset_data <- corona_data[corona_data$date == selected_date, ]
+    sum_cases <- aggregate(subset_data$cases, 
+                           by = list(country = subset_data$country, iso3 = subset_data$iso3), 
+                           FUN = sum)
+    return(sum_cases)
+  })
+
+  
+  # Define the output of the choropleth map as a plotly object that shows a choropleth map of the cases by country
+  output$choropleth <- renderPlotly({
+    selected_data() %>%
+      plot_ly(z = selected_data()$x, text = ~selected_data()$country, 
+              locations = ~selected_data()$iso3, 
+              locationmode = "ISO-3", type = "choropleth", 
+              color = "Bergeron") %>%
+      colorbar(title = "Total Covid-reported cases ") %>%
+      layout(title = "Cases by Country", 
+             geo = list(showframe = FALSE, showcoastlines = FALSE))
+  })
+})
 
 # Run the Shiny app
 shinyApp(ui = ui, server = server)
