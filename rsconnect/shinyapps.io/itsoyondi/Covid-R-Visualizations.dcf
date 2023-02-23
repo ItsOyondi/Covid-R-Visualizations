@@ -1,0 +1,14 @@
+name: Covid-R-Visualizations
+title: Covid-R-Visualizations
+username:
+account: itsoyondi
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8274975
+bundleId: 6830045
+url: https://itsoyondi.shinyapps.io/Covid-R-Visualizations/
+when: 1675995955.89748
+lastSyncTime: 1675995955.89748
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData

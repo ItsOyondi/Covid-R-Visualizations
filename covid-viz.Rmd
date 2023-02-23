@@ -204,37 +204,100 @@ shinyApp(ui = ui, server = server,  options = list(width = "100%", height = "400
 ### Creating a new choropleth for the cases using a slider input
  
 ```{r warning=FALSE}
-
 library(shiny)
 
 # Read the data file into a data frame
 corona_data <- read.csv("coronavirus.csv")
-
+#confirmed
+confirmed <- corona_data %>% 
+  filter(type == "confirmed") %>%
+  group_by(date, country, iso3) %>%
+  summarise(total_cases = sum(cases)) %>%
+  arrange(-total_cases)
+#deaths
+deaths <- corona_data %>% 
+  filter(type == "death") %>%
+  group_by(date, country, iso3) %>%
+  summarise(total_cases = sum(cases)) %>%
+  arrange(-total_cases)
+#recovered
+recovered <- corona_data %>% 
+  filter(type == "recovery") %>%
+  group_by(date, country, iso3) %>%
+  summarise(total_cases = sum(cases)) %>%
+  arrange(-total_cases)
 # Define the user interface of the Shiny app
-ui <- basicPage(
-  sliderInput(
-    "slider", "Time",
-    # Set the minimum value of the slider to the earliest date in the data
-    min = as.Date(corona_data$date[1]),
-    # Set the maximum value of the slider to the latest date in the data
-    max = as.Date(corona_data$date[length(corona_data$date)]),
-    # Set the default value of the slider to the latest date in the data
-    value = as.Date(corona_data$date[length(corona_data$date)]),
-    timeFormat = "%b %Y"
-  ),
-  # Define a plotly output to show a choropleth map of the cases by country
-  plotlyOutput("choropleth")
+ui <- fluidPage(
+  # Create a header with a title panel
+  navbarPage("COVID-19 Dashboard",
+    tabPanel("Map",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput(inputId = "case_type", label = "Choose type of cases to analyze:",
+                      choices = c("All", "Confirmed", "Died", "Recovered")),
+          sliderInput(
+            "slider", "Time",
+            # Set the minimum value of the slider to the earliest date in the data
+            min = as.Date(corona_data$date[1]),
+            # Set the maximum value of the slider to the latest date in the data
+            max = as.Date(corona_data$date[length(corona_data$date)]),
+            # Set the default value of the slider to the latest date in the data
+            value = as.Date(corona_data$date[length(corona_data$date)]),
+            timeFormat = "%b %Y"
+          )
+        ),
+        mainPanel(
+          plotlyOutput("choropleth")
+        )
+      )
+    ),
+    tabPanel("Charts",
+      # Add charts here
+    ),
+    tabPanel("Table",
+      # Add table here
+    )
+  )
 )
+
 
 # Define the server of the Shiny app
 server <- shinyServer(function(input, output, session){
   # Define a reactive expression to subset the data and calculate the sum of cases by country for the selected date
+  #define different datasets for confirmed, deaths and recovered
+  
+
+  
   selected_data <- reactive({
     selected_date <- as.Date(input$slider)
-    subset_data <- corona_data[corona_data$date == selected_date, ]
-    sum_cases <- aggregate(subset_data$cases, 
+    
+      #logic for specifying the kind of data to be used in the choropleth
+    # Check which value was selected using an if statement
+    if (input$case_type == "All") {
+      # Do something if "All" was selected
+      subset_data <- corona_data[corona_data$date == selected_date, ]
+      sum_cases <- aggregate(subset_data$cases, 
                            by = list(country = subset_data$country, iso3 = subset_data$iso3), 
                            FUN = sum)
+    } else if (input$case_type == "Confirmed") {
+      # Do something if "Confirmed" was selected
+      subset_data <- confirmed[confirmed$date == selected_date, ]
+      sum_cases <- aggregate(subset_data$total_cases, 
+                           by = list(country = subset_data$country, iso3 = subset_data$iso3), 
+                           FUN = sum)
+    } else if (input$case_type == "Died") {
+      subset_data <- deaths[deaths$date == selected_date, ]
+      sum_cases <- aggregate(subset_data$total_cases, 
+                           by = list(country = subset_data$country, iso3 = subset_data$iso3), 
+                           FUN = sum)
+    } else if (input$case_type == "Recovered") {
+      subset_data <- recovered[recovered$date == selected_date, ]
+      sum_cases <- aggregate(subset_data$total_cases, 
+                           by = list(country = subset_data$country, iso3 = subset_data$iso3), 
+                           FUN = sum)
+    }
+    
+    
     return(sum_cases)
   })
 
@@ -255,5 +318,8 @@ server <- shinyServer(function(input, output, session){
 # Run the Shiny app
 shinyApp(ui = ui, server = server)
 
+
+```
+```{r}
 
 ```
